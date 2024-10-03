@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Field Test</title>
+    <style>
+        body {
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .visual-field {
+            width: 500px;
+            height: 500px;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .target {
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            position: absolute;
+            top: calc(50% - 10px);
+            left: calc(50% - 10px);
+            border-radius: 50%;
+        }
+
+        .star-light {
+            width: 4px; /* Increase size */
+            height: 4px; /* Increase size */
+            background-color: white;
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.8; /* Increase opacity */
+            animation: twinkling 5s infinite;
+        }
+
+        @keyframes twinkling {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        #startButton, #yesButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #startButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: green;
+            color: white;
+        }
+
+        #yesButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: yellow;
+            color: black;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="visual-field">
+        <div class="target"></div>
+    </div>
+    <button id="startButton">Start Test</button>
+    <button id="yesButton">Yes</button>
+    <audio id="bellSound" src="bell.mp3"></audio>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const visualField = document.querySelector('.visual-field');
+            const target = document.querySelector('.target');
+            const startButton = document.getElementById('startButton');
+            const yesButton = document.getElementById('yesButton');
+            const bellSound = document.getElementById('bellSound');
+            let dotTimeout;
+
+            const radius = 200; // Radius of the circle
+            const centerX = visualField.clientWidth / 2;
+            const centerY = visualField.clientHeight / 2;
+            const starPositions = [];
+            const numberOfStars = 12; // Number of star lights
+
+            // Calculate star positions in a circular pattern
+            for (let i = 0; i < numberOfStars; i++) {
+                const angle = (2 * Math.PI / numberOfStars) * i;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                starPositions.push({ x, y });
+            }
+
+            let currentStarIndex = 0;
+
+            function placeDot() {
+                // Remove existing star light
+                const existingStarLight = document.querySelector('.star-light');
+                if (existingStarLight) {
+                    existingStarLight.remove();
+                }
+
+                // Get the next star position
+                const { x, y } = starPositions[currentStarIndex];
+                currentStarIndex = (currentStarIndex + 1) % starPositions.length;
+
+                // Create new star light
+                const newStarLight = document.createElement('div');
+                newStarLight.classList.add('star-light');
+                newStarLight.style.left = x + 'px';
+                newStarLight.style.top = y + 'px';
+                visualField.appendChild(newStarLight);
+
+                // Schedule the removal of the new star light
+                dotTimeout = setTimeout(() => {
+                    newStarLight.remove();
+                }, 5000);
+            }
+
+            function startTest() {
+                clearTimeout(dotTimeout); // Clear any existing timeout
+                placeDot(); // Generate star light immediately
+                dotTimeout = setInterval(placeDot, 5000); // Generate star light every 5 seconds
+            }
+
+            function handleYesButtonClick() {
+                const starLight = document.querySelector('.star-light');
+                if (starLight) {
+                    const starLightRect = starLight.getBoundingClientRect();
+                    const targetRect = target.getBoundingClientRect();
+                    const xOffset = starLightRect.left - targetRect.left;
+                    const yOffset = starLightRect.top - targetRect.top;
+
+                    // Fetch current date and time
+                    const currentDate = new Date().toLocaleString();
+
+                    // Store log entry in local storage
+                    const logEntry = {
+                        position: `X: ${xOffset.toFixed(2)}px, Y: ${yOffset.toFixed(2)}px`,
+                        date: currentDate
+                    };
+
+                    // Retrieve existing log entries from local storage or create an empty array
+                    let logEntries = JSON.parse(localStorage.getItem('logEntries')) || [];
+                    logEntries.push(logEntry);
+                    localStorage.setItem('logEntries', JSON.stringify(logEntries));
+                }
+
+                // Play bell sound
+                bellSound.currentTime = 0; // Reset sound to start
+                bellSound.play();
+            }
+
+            // Event listener for space bar key press
+            document.addEventListener('keydown', function(event) {
+                if (event.code === 'Space') {
+                    handleYesButtonClick();
+                }
+            });
+
+            startButton.addEventListener('click', startTest);
+            yesButton.addEventListener('click', handleYesButtonClick);
+        });
+    </script>
+</body>
+</html>
